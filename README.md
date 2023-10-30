@@ -9,7 +9,6 @@ This repo contains code for both the In-context Learning LLM inferece to generat
 
 ```
 pip install torch==1.13.1
-
 pip install transformers==4.22.1
 ```
 
