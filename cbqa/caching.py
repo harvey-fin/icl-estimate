@@ -1,15 +1,15 @@
 from __future__ import annotations
 import os
 import random
-from typing import *
 import pickle
-from tqdm import tqdm
-from torch.utils.data  import TensorDataset, DataLoader
-from datasets import Dataset, DatasetDict
 import torch
 import numpy as np
 import pandas as pd
 import csv
+from tqdm import tqdm
+from torch.utils.data  import TensorDataset, DataLoader
+from datasets import Dataset, DatasetDict
+from typing import *
 from load_cbqa import load_data
 from utils import split
 from config import ontology
@@ -23,7 +23,6 @@ class Task:
         name: str,
         task_type: str,
     ):
-        # TODO: Docstring for what these inputs are.
         self.task_type = task_type
         self.name = name
     
@@ -45,7 +44,6 @@ class Task:
     def of_type(self, task_type: str) -> bool:
         return self.task_type == task_type
     
-        
 
 class TaskList:
     """ Abstracts a list of tasks, allowing easy filtering of tasks by type. """
@@ -54,7 +52,6 @@ class TaskList:
         assert all(isinstance(task, Task) for task in tasks.values())
         self.tasks = tasks
         self.task_types = set(task.task_type for task in tasks.values())
-        # TODO: Construct efficient index of tasks
     
     
     @staticmethod
@@ -72,12 +69,11 @@ class TaskList:
         return TaskList(tasks)
 
 
-    
     @property
     def names(self) -> List[str]:
-        # WARNING: ASSUMES DICTS ARE ORDERED, Python > 3.7 required!
         return list(self.tasks.keys())
     
+
     def split(self, n: int) -> List[TaskList]:
         """
         Returns List of n equally sized splits of the TaskList
@@ -89,23 +85,28 @@ class TaskList:
         task_lists = [TaskList(dict(tasks)) for tasks in split_tasks]
         return task_lists
 
+
     def of_type(self, task_type: Union[str, List[str]]) -> TaskList:
         """ Filter tasks for a given type or list of types."""
         if isinstance(task_type, list):
             return self._of_types(task_type)
         assert task_type in self.task_types
         return TaskList({task_name: task for task_name, task in self.tasks.items() if task.task_type == task_type})
+
     
     def _of_types(self, task_types: List[str]) -> TaskList:
         """ Filters for tasks which fall into any given type."""
         return TaskList({task_name: task for task_name, task in self.tasks.items() if task.task_type == task_type})
     
+
     def of_ontology(self, ontology: Dict, task_type: List[str] = ontology.keys()) -> TaskList:
         """ Filter tasks for only those in the ontology """
         return self._of_names([task_name for t in task_type for task_name in ontology[t]])
     
+
     def __len__(self) -> int:
         return len(self.tasks)
+
 
     def __getitem__(self, key: Union[int, List[str], str]) -> Union[Task, TaskList]:
         """ Index by task name, integer index, or list of task names. """
@@ -115,18 +116,23 @@ class TaskList:
             return self._of_names(key)
         else:
             return self.tasks[key]
-    
+
+
     def _of_names(self, task_names: List[str]) -> TaskList:
         return TaskList({task_name: self[task_name] for task_name in task_names})
-    
+
+
     def __setitem__(self, key: str, value: Task):
         self.tasks[key] = value
-    
+
+
     def __delitem__(self, key: str):
         del self.tasks[key]
 
+
     def __iter__(self) -> Iterator[Task]:
         return iter(self.tasks.values())
+
 
     def __str__(self) -> str:
         start = "["
@@ -136,10 +142,12 @@ class TaskList:
         start += "]"
         return start
 
+
     def __add__(self, other: TaskList) -> TaskList:
         assert len(set(self.tasks.keys()).intersection(other.tasks.keys())) == 0
         new_tasks = dict(chain.from_iterable([self.tasks.items(), other.tasks.items()]))
         return TaskList(new_tasks)
+
 
 class InferenceResult:
     """ Caches the outputs of a single model on a task with a set of hyperparams."""
@@ -166,7 +174,8 @@ class InferenceResult:
         self.prompt = prompt
         self.num_shots = num_shots
         self.model_name = model_name
-    
+
+
     @classmethod
     def from_path(cls, path: str, pca_path:str, *args, **kwargs) -> InferenceResult:
         """ Cache an inference result from a .pkl file. """
@@ -184,6 +193,7 @@ class InferenceResult:
             pca_embeds=None
         return cls(accs=accs, confs=confs, embeds=embeds, pca_embeds=pca_embeds, *args, **kwargs)
 
+
     def is_same_source(self, other: Union[InferenceResult, Task]) -> bool:
         """
         This is used to remove all inferences from train set which:
@@ -197,17 +207,21 @@ class InferenceResult:
             other = other.task
         return other == self.task
 
+
     @property
     def mean_score(self) -> float:
         return np.mean(self.accs)
+
 
     @property
     def mean_conf(self) -> float:
         return np.mean(self.confs)
 
+
     @property
     def mean_embed(self) -> np.ndarray:
         return np.mean(self.embeds, axis=0)
+
 
     @property
     def mean_pca_embed(self) -> np.ndarray:
@@ -216,11 +230,14 @@ class InferenceResult:
         else:
             return np.mean(self.pca_embeds, axis=0)
 
+
     def __len__(self) -> int:
         return len(self.confs)
 
+
     def __str__(self) -> str:
         return f"Inference({self.task}, seed={self.seed}, num_shots={self.num_shots})"
+
 
     def __getitem__(self, key: int) -> InferenceResult:
         """ Used to slice the number of examples in an inference to a fixed num. """
@@ -237,12 +254,14 @@ class InferenceResult:
         )
         return inf_copy
 
+
 class InferenceCache:
     """ Caches a sweep of inferences from varying some params. """
     def __init__(self, inferences: List[InferenceResult]):
         assert isinstance(inferences, list)
         self.inferences = inferences
-    
+
+
     @classmethod
     def load_from_path(cls, path: str, pca_path:str = None, task_list: TaskList = None) -> InferenceCache:
         """
@@ -278,12 +297,11 @@ class InferenceCache:
             )
             inferences.append(inf)
         return InferenceCache(inferences)
-    
+
+
     def _parse_filename(filename: str) -> Tuple:
         """
         Helper for load_from_path.
-        This function is very ugly.
-        Probably inevitable!
         """
         chunks = filename.split("_")    
         model_name = chunks[-1][:-4]
@@ -307,20 +325,7 @@ class InferenceCache:
         """ Utility for setting all inferences to a fixed num examples n. """
         return InferenceCache([inf[:n] for inf in self.inferences])
 
-    def get_pca(self):
-        meta_list = []
-        for idx in range(len(self.inferences)):
-            if self.meta_data[idx]:
-                meta_feature = self.meta_data[idx]["embeds"]
-                meta_list.append(meta_feature)
-        if meta_list:
-            meta_arr = np.array(meta_list)
-            scaler = StandardScaler()
-            meta_standard = scaler.fit_transform(meta_arr)
-            pca = PCA(n_components=50)
-            pca.fit(meta_standard)
-            return pca
-    
+
     def get_embedloader(self, train:bool = True) -> Union[DataLoader, List[DataLoader]]:
         data = self.embeds[0]
         accs = self.y[0]
@@ -345,41 +350,6 @@ class InferenceCache:
                 data_list.append(dataloader)
             return data_list
 
-
-    def conf_binloader(self, num_bin: int, batch_size: int=1) -> DataLoader:
-        """ Makes a DataLoader of average embeddings binned by confidence profile """
-        x = []
-        y = []
-        for idx in range(len(self.inferences)):
-            conf = self.confs[idx]
-            m = [v!=0 for v in conf]
-            check = [v for v in conf if v!=0]
-            if len(check)<20:
-                continue
-            if 0 in conf:
-                # mask out 0 confidence
-                mask_conf = np.array(conf)[m]
-                locs = np.linspace(0, 100, num=int(num_bin))
-            else:
-                locs = np.linspace(0, 100, num=int(num_bin)+1)
-                mask_conf = conf
-            values_conf = np.percentile(mask_conf, locs)
-            if 0 in conf:
-                values_conf = np.append(values_conf, [1.1])
-            inds = np.digitize(self.confs[idx], values_conf)
-            combined = np.array([], dtype=np.float32)
-            for i in range(1, num_bin+1):
-                mask = [v==i for v in inds]
-                # modify this line for pca/non-pca
-                embed_arr = np.mean(np.array(self.pca_embeds[idx])[mask], axis=0)
-                combined = np.concatenate([combined, embed_arr])
-            x.append(combined)
-            y.append(self.mean_score[idx])
-        x, y = np.array(x), np.array(y)
-        x, y = torch.Tensor(x), torch.Tensor(y)
-        dataset = TensorDataset(x, y)
-        dataloader = DataLoader(dataset, batch_size = batch_size, shuffle=True)
-        return dataloader
 
     def exclude_conf(self, dim:int, batch_size: int=1) -> DataLoader:
         """ Makes a DataLoader of average embeddings binned by confidence profile """

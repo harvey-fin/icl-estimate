@@ -5,11 +5,11 @@ import sys
 import csv
 import random
 import pickle
+import torch
+import pandas as pd
 from typing import *
 from itertools import chain
 from typing import *
-import torch
-import pandas as pd
 from tqdm import tqdm
 from datasets import load_dataset, DatasetDict, Dataset
 from promptsource.templates import DatasetTemplates

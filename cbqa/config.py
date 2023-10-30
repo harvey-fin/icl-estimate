@@ -4,7 +4,3 @@ tasks_other = ["crossfit:spider", "crossfit:ade_corpus_v2-dosage", "crossfit:wik
 
 ontology = {"qamrc": tasks_qamrc, "cbqa": tasks_cbqa, "other": tasks_other, "seq2seq": tasks_qamrc + tasks_cbqa + tasks_other}
 
-
-# mcqa: "crossfit:superglue-multirc", "race-high", "quail"
-# qamrc: "crossfit:biomrc", "crossfit:duorc", "crossfit:quoref"
-# other: "crossfit:kilt_ay2", "crossfit:xsum"

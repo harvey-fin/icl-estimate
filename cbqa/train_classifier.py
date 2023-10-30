@@ -1,15 +1,15 @@
 import pickle
 import os
 import random
-#import wandb
 import uuid
 import sys
-from tabulate import tabulate
-from tqdm import tqdm
 import click
 import pandas as pd
 import numpy as np
 import torch
+import xgboost
+from tabulate import tabulate
+from tqdm import tqdm
 from torch.utils.data import TensorDataset, DataLoader
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
@@ -17,7 +17,6 @@ from scipy.stats import binned_statistic
 from utils import load_all_crossfit
 from caching import TaskList, InferenceCache
 from config import ontology
-import xgboost
 from scipy.stats import randint, uniform
 
 
@@ -25,12 +24,6 @@ class xgb:
     def __init__(self, num_dim:int =20):
         self.vector_dim  = num_dim
         self.model = xgboost.XGBRegressor(objective="reg:squarederror")
-        """
-        self.parameters = {
-                "learning_rate": [ 0.02, 0.05, 0.1, 0.2, 0.3, 0.5],
-                "lambda": [0, 0.05, 0.1, 0.2, 0.5, 1, 1.2, 1.5]}
-        self.cv = GridSearchCV(estimator=self.model, param_grid=self.parameters, cv=5)
-        """
         self.param_dist = {
                 "learning_rate": uniform(0.01, 0.5),
                 "max_depth": randint(3,10),
@@ -82,7 +75,6 @@ class xgb:
         return error, np.mean(output)
 
 
-
 class KNN:
     def __init__(self, num_neighbor, num_dim=20):
         self.weights = "distance"
@@ -113,7 +105,6 @@ class KNN:
             test_y[i] = np.array(targets)
 
         output = self.model.predict(test_X)
-        #neighbors = self.model.kneighbors(test_X)[1].squeeze(1)
         error = np.mean([np.abs(output[idx][0]-test_y[idx][0]) for idx in range(len(output))])
 
         return error, np.mean(output)
@@ -143,7 +134,6 @@ class MLP(torch.nn.Module):
             self.device = 'cuda:0'
         else:
             self.device = 'cpu'
-        # Danger: not in-place for tensors
         self.to(self.device)
 
 
@@ -157,15 +147,8 @@ class MLP(torch.nn.Module):
             List[(distribution (float: data_dim), accuracy (float))]
         """
         self.train()
-        #TODO: Fix this wandb project and run naming
-        # TODO: Log some config info like train datasets
-        #run = wandb.init(reinit=True, project="random", job_type="valid_set", group="13B")
-        #run.name = run_name + ":" + run.name
-        # TODO: What loss function?
         loss_function = torch.nn.MSELoss()
         valid_criterion = torch.nn.L1Loss()
-        # TODO: Maybe do weight decay?
-        # TODO: train_batch_size
         optimizer = torch.optim.Adam(self.parameters(), lr=lr)
         scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda epoch:0.65**epoch)
         best_val_loss = float('inf')
@@ -180,14 +163,12 @@ class MLP(torch.nn.Module):
             for i, data in enumerate(trainloader, 0):
                 inputs, targets = data
                 inputs, targets = inputs.float(), targets.float()
-                # .to(device) both inputs & targets
                 targets = targets.reshape((targets.shape[0], 1))
                 inputs, targets = inputs.to(self.device), targets.to(self.device)
 
                 optimizer.zero_grad()
                 outputs = self(inputs)
                 loss = loss_function(outputs, targets)
-                #wandb.log({'train_loss':loss}, step=len(trainloader)*epoch+i)
                 loss.backward()
                 optimizer.step()
                 train_losses.append(loss.item())
@@ -205,7 +186,6 @@ class MLP(torch.nn.Module):
                 loss = valid_criterion(outputs, targets)
                 valid_losses.append(loss.item())
 
-                #wandb.log({'valid_loss':loss}, step=len(trainloader)*epoch+i)
 
             train_loss = np.average(train_losses)
             valid_loss = np.average(valid_losses)
@@ -220,10 +200,8 @@ class MLP(torch.nn.Module):
                     print(f"{epoch}/{num_epochs} *** training loss: {round(train_loss,4)}\n valid_loss: {round(valid_loss,4)}")
                     break
 
-
             self.train()
             scheduler.step()
-        #run.finish()
         self.load_state_dict(best_model)
         losses, all_outputs = self.test_model(testloader)
         return losses, all_outputs
@@ -282,7 +260,7 @@ def get_simulated_data(num_samples, num_virtual_samples=2000):
 @click.option("--seed", type=int, default=1, help="random seed")
 @click.option("--train_size", type=int, default=30, help="number of inferences/seed, dataset for training data")
 @click.option("--llama/--opt", type=bool, default=True, help="Use LLaMA or OPT")
-@click.option("--metric", type=click.Choice(["conf", "pca_embed", "conf_bin", "conf_embed"]), help="metric for dataloader")
+@click.option("--metric", type=click.Choice(["conf", "pca_embed", "conf_embed"]), help="metric for dataloader")
 def main(
     return_error, 
     setting, 
@@ -317,7 +295,6 @@ def main(
     torch.manual_seed(seed)
     np.random.seed(seed)
     random.seed(seed)
-    run_id = str(uuid.uuid4())[:6]
     train_hyperparams = {"do_sigmoid": do_sigmoid, "num_unlabeled": num_unlabeled, "data_dim": data_dim, "dropout": dropout, "lr": lr, "run_id": run_id,
             "lr_lambda": lr_lambda, "num_epochs": num_epochs,"return_error": return_error, "metric": metric, "train_size": train_size}
     
@@ -339,7 +316,6 @@ def main(
     if only_size:
         all_inferences = all_inferences.of_size(only_size)
     all_tasks = all_inferences.tasks
-
     
     print("\n\n\n")
     print(f"Loaded {len(all_tasks)} tasks.")
@@ -350,8 +326,6 @@ def main(
     if setting == "cv":
         task_names = ontology[tasks]
         all_inferences = all_inferences.of_task(task_names)
-        # TODO:
-        #   find other ways to filter datasets
         assert cv_k <= len(all_tasks), "Can't do more folds than leave-one-out (n-fold)"
         tasks_cv = all_tasks.split(n=cv_k)
         setting = f"cv_{tasks}"
@@ -360,7 +334,6 @@ def main(
             header = ",".join(test_task_list.names)
             df_headers.append(header)
             test_inferences = all_inferences.of_task(test_task_list)
-            # fix the test set: only include first 5 seeds for all shots -> 10 inferences in total for each dataset
 
             train_inferences = all_inferences.exclude_related(test_inferences)
             train_inferences = train_inferences.top_seeds(train_size)
@@ -371,10 +344,8 @@ def main(
     results = results.dropna(axis="columns", how="all")
     results["mean_accs"] = results.mean(axis="columns")
     results["std"] = results.std(axis="columns")
-    # TODO: Print this prettier but for now just get first n cols
-    #print(tabulate(results.iloc[:, :7], headers="keys"))
-    #order = ['avg_acc', 'std_acc', '1nn', '2nn', '3nn', 'xgb', 'mlp2', 'train_mean', 'avg_conf', 'ATC', '4_lld', '8_lld', '16_lld', '32_lld', '64_lld']
-    order = ['avg_acc', 'std_acc', 'ATC', '4_lld', '8_lld', '16_lld', '32_lld', '64_lld']
+
+    order = ['avg_acc', 'std_acc', '1nn', '2nn', '3nn', 'xgb', 'mlp2', 'train_mean', 'avg_conf', 'ATC', '4_lld', '8_lld', '16_lld', '32_lld', '64_lld']
     results = results.loc[order]
     print(results["mean_accs"], results["std"])
 
@@ -396,7 +367,6 @@ def sweep_methods(
         train_size
 ):
     results = {}
-    """
     for nn in range(1, 4):
         results[f"{nn}nn"] = run_meta_model(
             train=train_inferences,
@@ -471,7 +441,7 @@ def sweep_methods(
         return_error=return_error,
         num_unlabeled=num_unlabeled,
         setting=setting)
-    """
+
     results["avg_acc"] = run_meta_model(
         train=train_inferences,
         test=test_inferences,
@@ -580,7 +550,6 @@ def run_meta_model(
     elif method == "true":
         assert not return_error, "Cannot return error of true mean"
         res = [np.mean(acc) for acc in test_inferences.accs]
-        #res = np.dot(np.ones(len(test_inferences)),np.mean(test_inferences.y))
     elif method == "average":
         if return_error:
             res = np.abs(np.array(test_inferences.mean_scores) - np.mean(train_inferences.mean_scores)) 
@@ -598,8 +567,6 @@ def run_meta_model(
         sample_ys = test_inferences.accs
         true_means = np.array(test_inferences.mean_scores)
         if return_error:
-            # TODO: Error actually normalizes out (/100*100). 
-            # If using a diff number of samples, change...
             all_errors = []
             for i in range(100):
                 estimates = np.array([lld_estimate(list(sample_y), num_labeled) for sample_y in sample_ys])

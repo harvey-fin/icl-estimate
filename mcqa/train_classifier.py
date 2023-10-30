@@ -325,21 +325,21 @@ def main(
         train_size=10
         all_tasks = TaskList.load_mmlu()
         if llama:
-            pkl_path = "pkls_llama_new"
-            pca_path = "pkls_llama_pca_new"
+            pkl_path = "pkls_llama"
+            pca_path = "pkls_llama_pca"
         else:
-            pkl_path = "pkls_opt_mmlu_new"
-            pca_path = "pkls_opt_mmlu_pca_new"
+            pkl_path = "pkls_opt_mmlu"
+            pca_path = "pkls_opt_mmlu_pca"
     else:
         tasks = "crossfit"
         train_size=30
         all_tasks = TaskList.load_crossfit()
         if llama:
-            pkl_path = "pkls_mcqa_new"
-            pca_path = "pkls_mcqa_pca_new"
+            pkl_path = "pkls_mcqa"
+            pca_path = "pkls_mcqa_pca"
         else:
-            pkl_path = "pkls_opt_mcqa_new"
-            pca_path = "pkls_opt_mcqa_pca_new"
+            pkl_path = "pkls_opt_mcqa"
+            pca_path = "pkls_opt_mcqa_pca"
 
     # load inferences accordingly
     # filter the inferences such that they all have more than 50 data points

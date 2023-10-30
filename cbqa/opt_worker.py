@@ -5,14 +5,14 @@ import random
 import sys
 import torch
 import os
+import matplotlib.pyplot as plt
+import utils
 from transformers import set_seed
 from model import OPTForSeq2Seq, ConfidenceCalibrator
 from metrics import Seq2SeqScorer
 from datasets import load_dataset
 from promptsource.templates import DatasetTemplates
-import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
-import utils
 from utils import load_all_crossfit, load_templates, TokenLengthException
 from caching import TaskList
 from datasets import DatasetDict
@@ -28,7 +28,6 @@ def run_single(
         confidence_metric,
         scorer_function,
         random_seed=1,
-        debug=False,
         sampling=False):
     set_seed(random_seed)
     random.seed(random_seed)
@@ -39,29 +38,17 @@ def run_single(
     outputs, confidences, embeddings = model(test_prompts, confidence_metric=confidence_metric)
     f1_scorer = Seq2SeqScorer(score_metric="spearman", answer_checker=scorer_function)
     f1_results = f1_scorer.score(predictions=outputs, confidences=confidences, labels=labels)
-    """
-    if debug:
-        print(dataset["train"][:5])
-        print(prompt)
-        print(test_prompts[:5])
-        print(outputs[:5])
-        print(confidences[:5])
-        print(f1_results)
-        import pdb; pdb.set_trace()
-    """
+
     return confidences, f1_results["score1"], embeddings
+
 
 @click.command()
 @click.option("--model_size", default="opt-125m")
 @click.option("--num_shots", default=4)
 @click.option("--seed", default=1)
-@click.option("--debug", default=False, type=bool)
-@click.option("--metadata_only", default=False, type=bool)
 def main(model_size, 
         num_shots, 
-        seed,
-        debug,
-        metadata_only):
+        seed):
     scorer_function = "f1"
     confidence_metric = "greedy_loglikelihood"
     max_token = 16
@@ -89,8 +76,7 @@ def main(model_size,
                     num_shots=num_shots,
                     confidence_metric=confidence_metric,
                     scorer_function=scorer_function,
-                    random_seed=seed,
-                    debug=debug)
+                    random_seed=seed)
                 print("Average f1:", np.mean(accs))
                 return_list = {"confs": conf, "accs": accs, "embeds": embed}
                 with open(pickle_name, "wb") as f:
