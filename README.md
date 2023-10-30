@@ -3,7 +3,7 @@
 This paper is the code implementation of "[Estimating Large Language Model Capabilities without Labeled Test Data](https://arxiv.org/abs/2305.14802)" by [Harvey Yiyun Fu](https://harvey-fin.github.io/), [Qinyuan Ye](http://yeqy.xyz/), [Albert Xu](https://scholar.google.com/citations?user=iFeGf_EAAAAJ&hl=en), [Xiang Ren](https://shanzhenren.github.io/), and [Robin Jia](https://robinjia.github.io/).
 
 <p align="center">
-  <img src="intro.png" width="80%" height="80%">
+  <img src="intro.png" width="40%" height="40%">
 </p>
 
 This repo contains code for both the In-context Learning LLM inference to generate meta-training data and the meta-model training. 
