@@ -4,7 +4,7 @@ This paper is the code implementation of "[Estimating Large Language Model Capab
 
 This repo contains code for both the In-context Learning LLM inferece to generate meta-training data and the meta-model training. 
 
-### Installation
+## Installation
 -----
 
 ```
@@ -13,7 +13,7 @@ pip install torch==1.13.1
 pip install transformers==4.22.1
 ```
 
-### Quick Start
+## Quick Start
 -----
 
 To run experiments with MMLU and MCQA datasets:
@@ -101,7 +101,7 @@ python train_classifier.py\
 - `--seed`: random seed 
 - `--do_sigmoid`, `--dropout`, `--lr`, `--lr_lambda`, `--num_epochs`: MLP hyperparameters
 
-### Acknowledgement
+## Acknowledgement
 -----
 We did not include meta-training data in this repo due to its large magnitude. We did not include the inference code for LLaMA models to avoid certain copyright issues. We thank :hugs: [huggingface datasets](https://github.com/huggingface/datasets) for making the datasets and LLMs easily accessible.
 
