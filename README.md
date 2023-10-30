@@ -3,10 +3,10 @@
 This paper is the code implementation of "[Estimating Large Language Model Capabilities without Labeled Test Data](https://arxiv.org/abs/2305.14802)" by [Harvey Yiyun Fu](https://harvey-fin.github.io/), [Qinyuan Ye](http://yeqy.xyz/), [Albert Xu](https://scholar.google.com/citations?user=iFeGf_EAAAAJ&hl=en), [Xiang Ren](https://shanzhenren.github.io/), and [Robin Jia](https://robinjia.github.io/).
 
 <p align="center">
-  <img src="intro.pdf" width="80%" height="80%">
+  <img src="intro.png" width="80%" height="80%">
 </p>
 
-This repo contains code for both the In-context Learning LLM inferece to generate meta-training data and the meta-model training. 
+This repo contains code for both the In-context Learning LLM inference to generate meta-training data and the meta-model training. 
 
 ## Installation
 -----
@@ -39,7 +39,7 @@ While under `mcqa/`, run the following command to do inference using the OPT mod
 python opt_mmlu_worker.py\
     --model_size opt-6.7b --num_shots 5 --temperature 0 --template mmlu --seed 1
 ```
-- `--model_size`: size of the OPT model, such as `opt-6.7b` or `opt-13b`
+- `--model_size`: the size of the OPT model, such as `opt-6.7b` or `opt-13b`
 - `--num_shots`: number of few-shot examples in the prompt
 - `--template`: the prompt template to demonstrate the few-shot examples. Choose from `mmlu`, `subject`, `gopher`, `gpt`, and `user`.
 - `--temperature`: hyperparameter to control the randomness
@@ -50,7 +50,7 @@ Similarly, while under `cbqa/`, run the following command to do inference using 
 python opt_worker.py\
     --model_size opt-6.7b --num_shots 5 --seed 1
 ```
-- `--model_size`: size of the OPT model, such as `opt-6.7b` or `opt-13b`
+- `--model_size`: the size of the OPT model, such as `opt-6.7b` or `opt-13b`
 - `--num_shots`: number of few-shot examples in the prompt
 - `--seed`: random seed
 
@@ -58,7 +58,7 @@ Then under either directory, run
 ```
 python transform_embed.py
 ```
-to retrieve and store the PCA transformed embeddings
+to retrieve and store the PCA-transformed embeddings
 
 
 ### Meta-model training
@@ -71,8 +71,8 @@ python train_classifier.py\
 ```
 
 - `--setting`: general setting for train/test split
-- `--cv_k`: number of splits for cross validation
-- `--tasks`: task defined in `config.py` as the meta data, choose from `mmlu` and `mcqa`
+- `--cv_k`: number of splits for cross-validation
+- `--tasks`: task defined in `config.py` as the metadata, choose from `mmlu` and `mcqa`
 - `--num_unlabeled`: how much data to include in a single confidence profile
 - `--data_dim`: dimension of confidence profile
 - `--only_size`: inference of the specified size of LLM
@@ -80,7 +80,7 @@ python train_classifier.py\
 - `--llama/--opt`: use llama model or opt model
 - `--mmlu/--mcqa`: do inference on `mmlu` or `mcqa`
 - `--metric`: metric for processing confidence profile, choose from `conf`, `pca_embed`, `conf_embed`
-- `--train_size`: number of seed to include in the training/test data
+- `--train_size`: number of seeds to include in the training/test data
 - `--seed`: random seed
 - `--do_sigmoid`, `--dropout`, `--lr`, `--lr_lambda`, `--num_epochs`: MLP hyperparameters
 
@@ -92,8 +92,8 @@ python train_classifier.py\
 ```
 
 - `--setting`: general setting for train/test split
-- `--cv_k`: number of splits for cross validation
-- `--tasks`: task defined in `config.py` as the meta data, choose from `cbqa` and `seq2seq`
+- `--cv_k`: number of splits for cross-validation
+- `--tasks`: task defined in `config.py` as the metadata, choose from `cbqa` and `seq2seq`
 - `--num_unlabeled`: how much data to include in a single confidence profile
 - `--data_dim`: dimension of confidence profile 
 - `--only_size`: inference of the specified size of LLM
